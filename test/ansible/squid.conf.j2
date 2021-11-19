@@ -1,0 +1,93 @@
+#
+# Рекомендуемая минимальная конфигурация:
+#
+
+# Пример правила, позволяющего доступ из вашей локальной сети.
+# Адаптируйте этот список под свои нужды, указывая (внутренние) IP
+# сетей откуда должен быть разрешён вход
+# acl localnet src 0.0.0.1-0.255.255.255  # RFC 1122 "this" network (LAN)
+# acl localnet src 10.0.0.0/8     # RFC 1918 local private network (LAN)
+# acl localnet src 100.64.0.0/10      # RFC 6598 shared address space (CGN)
+# acl localnet src 169.254.0.0/16     # RFC 3927 link-local (directly plugged) machines
+# acl localnet src 172.16.0.0/12      # RFC 1918 local private network (LAN)
+# acl localnet src 192.168.0.0/16     # RFC 1918 local private network (LAN)
+# acl localnet src fc00::/7           # RFC 4193 local private network range
+# acl localnet src fe80::/10          # RFC 4291 link-local (directly plugged) machines
+acl worldnet src all
+
+# Итак, в предыдущей секции мы создали правило доступа с именем localnet.
+
+# Создаём ещё одно правила с именами SSL_ports и SSL_ports и перечисляем в нём порты
+acl SSL_ports port 443
+acl Safe_ports port 80 # http
+acl Safe_ports port 21 # ftp
+acl Safe_ports port 443 # https
+# acl Safe_ports port 70      # gopher
+# acl Safe_ports port 210     # wais
+# acl Safe_ports port 1025-65535  # unregistered ports
+# acl Safe_ports port 280     # http-mgmt
+# acl Safe_ports port 488     # gss-http
+# acl Safe_ports port 591     # filemaker
+# acl Safe_ports port 777     # multiling http
+acl CONNECT method CONNECT
+
+via off
+forwarded_for delete
+
+auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwd
+auth_param basic children 5
+auth_param basic credentialsttl 2 hours
+auth_param basic casesensitive on
+auth_param basic realm Enter your creds
+acl auth_users proxy_auth REQUIRED
+http_access allow auth_users
+
+#
+# Рекомендуемая минимальная конфигурация разрешения доступа:
+#
+# Теперь мы запрещаем доступ ко всем портам, кроме добавленных в правило Safe_ports
+http_access deny !Safe_ports
+
+# Запрещаем CONNECT для всех портов, кроме перечисленных в правиле SSL_ports
+http_access deny CONNECT !SSL_ports
+
+# Разрешаем доступ к cachemgr только от localhost
+http_access allow localhost manager
+http_access deny manager
+
+# Мы настоятельно рекомендуем раскомментировать следующее, чтобы защитить невинные веб-приложения, 
+# работающие на прокси-сервере, которые думают, что единственный, кто может получить доступ 
+# к службам на "localhost", - это локальный пользователь.
+#http_access deny to_localhost
+
+#
+# ВСТАВЬТЕ СВОИ СОБСТВЕННЫЕ ПРАВИЛА, ЧТОБЫ РАЗРЕШИТЬ ДОСТУП ДЛЯ ВАШИХ КЛИЕНТОВ
+#
+
+# Далее мы настраиваем доступ, разрешая его всем, кто перечислен в правиле с именем localnet, а также localhost (локальному хосту):
+# http_access allow localnet
+# http_access allow localhost
+
+# Наконец, мы запрещаем доступ всем другим к этому прокси
+# http_access deny all
+
+# Открыл доступ всем
+http_access allow all
+
+# Squid по умолчанию прослушивает порт 3128
+# Поменял дефолтный на время, пока авторизацию не сделаю
+http_port 3140
+
+# Раскомментируйте и настройте следующее, чтобы добавить каталог дискового кэша.
+cache_dir ufs /var/cache/squid 100 16 256
+
+# Оставьте coredumps в первом каталоге кеша
+coredump_dir /var/cache/squid
+
+#
+# Добавьте над ними любую из ваших собственных записей refresh_pattern.
+#
+refresh_pattern ^ftp: 1440 20% 10080
+refresh_pattern ^gopher: 1440 0% 1440
+refresh_pattern -i (/cgi-bin/|\?) 0 0% 0
+refresh_pattern . 0 20% 4320

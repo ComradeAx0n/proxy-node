@@ -1,0 +1,58 @@
+- hosts: all
+  become: yes
+  vars:
+    creds:
+      - name: ax0n
+        pass: qwe123qwe
+  pre_tasks:
+    - name: Wait for port 22 to become open on the host, don't start checking for 10 seconds
+      wait_for:
+        port: 22
+        delay: 10
+
+    - name: Update apt list
+      apt:
+        update_cache: yes
+        
+    - name: Create folder for squid
+      file:
+        path: /var/cache/squid
+        state: directory
+        owner: proxy
+        group: proxy
+
+  roles:
+    - role: mafalb.squid.server
+      squid_cfg_template: squid.conf.j2
+
+  tasks:
+    - name: Install htpasswd
+      apt:
+        name:
+          - apache2-utils
+          - python3-passlib
+        update_cache: yes
+
+    - name: Add a user to a password file and ensure permissions are set
+      htpasswd:
+        path: /etc/squid/passwd
+        name: "{{ item.name }}"
+        password: "{{ item.pass }}"
+        owner: proxy
+        group: proxy
+        mode: 0640
+      loop: "{{ creds }}"
+      register: passwd
+    
+    - name: squid is restarted
+      service:
+        name: squid
+        state: restarted
+      when: passwd is changed
+
+    - ansible.posix.sysctl:
+        name: "{{ item }}"
+        value: '1'
+      loop:
+        - net.ipv4.icmp_echo_ignore_all
+        - net.ipv6.icmp.echo_ignore_all
