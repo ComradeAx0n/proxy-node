@@ -11,7 +11,7 @@ resource "linode_instance" "web-node" {
   private_ip = true
 
   provisioner "local-exec" {
-    command = "ansible-galaxy install -r ./ansible/requirements.yml && sleep 30 && ansible-playbook -u root -i '${self.ip_address},' --private-key ${var.prvkey} -e 'proxy_port=${var.proxy_port}' ./ansible/main.yml"
+    command = "ansible-galaxy install -r ./ansible/requirements.yml && sleep 60 && ansible-playbook -u root -i '${self.ip_address},' --private-key ${var.prvkey} -e 'proxy_port=${var.proxy_port}' -e 'new_hostname=${self.label}' ./ansible/main.yml"
     environment = {
       ANSIBLE_HOST_KEY_CHECKING = "False"
     }
