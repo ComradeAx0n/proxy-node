@@ -1,16 +1,17 @@
 - hosts: all
   become: yes
-  gather_facts: no
   vars:
+    new_hostname: test-node
     proxy_port: 3140
     creds:
       - name: ax0n
         pass: qwe123qwe
   pre_tasks:
-    - name: Wait for port 22 to become open on the host, don't start checking for 10 seconds
-      wait_for:
-        port: 22
-        # delay: 30
+    - name: Set a hostname
+      ansible.builtin.hostname:
+        name: '{{ new_hostname }}'
+      tags:
+        - terraform
 
     - name: Update apt list
       apt:
@@ -52,9 +53,13 @@
         state: restarted
       when: passwd is changed
 
-    - ansible.posix.sysctl:
+    - name: Block ICMP ipv4/ipv6
+      ansible.posix.sysctl:
         name: "{{ item }}"
         value: '1'
       loop:
         - net.ipv4.icmp_echo_ignore_all
         - net.ipv6.icmp.echo_ignore_all
+    
+    - name: Install netdata
+      ansible.builtin.import_tasks: ./netdata/tasks/main.yml
