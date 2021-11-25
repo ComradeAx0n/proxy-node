@@ -1,0 +1,16 @@
+---
+# Tasks file for Netdata
+- name: Include vars
+  ansible.builtin.include_vars: "../vars/main.yml"
+
+- ansible.builtin.import_tasks: install.yml
+
+- ansible.builtin.import_tasks: configure.yml
+
+- ansible.builtin.import_tasks: claim.yml
+
+- name: Restart Netdata
+  service:
+    name: netdata
+    state: restarted
+  when: generated_conf is changed or reclaimed_node is changed
