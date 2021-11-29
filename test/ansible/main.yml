@@ -2,10 +2,12 @@
   become: yes
   vars:
     new_hostname: test-node
-    proxy_port: 3140
     creds:
       - name: ax0n
         pass: qwe123qwe
+    INTERFACE: eth0
+    NETWORK: '2600:3c03:e000:01ec::/64'
+    SOURCE: TEST
   pre_tasks:
     - name: Set a hostname
       ansible.builtin.hostname:
@@ -26,9 +28,15 @@
 
   roles:
     - role: mafalb.squid.server
-      squid_cfg_template: squid.conf.j2
 
   tasks:
+    - name: Setup squid
+      ansible.builtin.import_tasks: ./squidwizard/addons/ansible_squid.yaml
+      vars:
+        install_dir: "{{ ansible_env.HOME }}"
+        squid_dir: "{{ install_dir }}/src/squid"
+        squidwizard_dir: "{{ install_dir }}/src/squidwizard"
+
     - name: Install htpasswd
       apt:
         name:
@@ -63,3 +71,5 @@
     
     - name: Install netdata
       ansible.builtin.import_tasks: ./netdata/tasks/main.yml
+      tags:
+        - netdata

@@ -1,0 +1,62 @@
+---
+- name: Install essential build tools
+  apt:
+    update_cache: yes
+    pkg:
+      - git
+      - python3-pip
+
+- name: Copy SquidWizard
+  copy:
+    src: ../../squidwizard/
+    dest: "{{ squidwizard_dir }}"
+
+- name: Install pipenv
+  pip:
+    name: pipenv
+    executable: pip3
+
+- name: Run Pipenv to install SquidWizard dependencies
+  command:
+    cmd: pipenv install
+    creates: "{{ ansible_env.HOME }}/.local/share/virtualenvs/squidwizard*"
+  args:
+    chdir: "{{ squidwizard_dir }}"
+
+- name: Run SquidWizard
+  command: >
+    pipenv run python3 squidwizard.py
+    --network {{ NETWORK }}
+    --interface {{ INTERFACE }}
+    --source {{ SOURCE }}
+  args:
+    chdir: "{{ squidwizard_dir }}"
+
+- name: Remove networkd file
+  file:
+    path: /etc/systemd/network/05-eth0.network
+    state: absent
+
+- name: Copy netplan file
+  copy:
+    remote_src: yes
+    src: "{{ squidwizard_dir }}/config/60-squid.yaml"
+    dest: /etc/netplan
+  register: copied_netplan
+
+- name: apply netplan
+  command: netplan apply
+  when: copied_netplan is changed
+
+- name: Copy squid file
+  copy:
+    remote_src: yes
+    src: "{{ squidwizard_dir }}/config/squid.conf"
+    dest: /etc/squid
+  register: copied_squid_file
+
+- name: restart squid
+  systemd:
+    state: restarted
+    name: squid
+  when: copied_squid_file is changed
