@@ -18,30 +18,8 @@ resource "linode_instance" "web-node" {
   }
 }
 
-resource "linode_nodebalancer" "web-nbl" {
-  label = "web-nbl"
-  region = "us-east"
-  client_conn_throttle = 20
-  tags = ["web", "nbl"] 
-}
-
-resource "linode_nodebalancer_config" "web-nbl-cfg" {
-  nodebalancer_id = linode_nodebalancer.web-nbl.id
-  port = var.proxy_port
-  protocol = "http"
-  check = "connection"
-  check_interval = 5
-  check_attempts = 2
-  check_timeout = 3
-  stickiness = "table"
-  algorithm = "leastconn"
-}
-
-resource "linode_nodebalancer_node" "web-nbl-node" {
+resource "linode_instance_ip" "web-node-ipv6" {
   count = var.nodes_count
-  nodebalancer_id = linode_nodebalancer.web-nbl.id
-  config_id = linode_nodebalancer_config.web-nbl-cfg.id
-  address = "${element(linode_instance.web-node.*.private_ip_address, count.index)}:${var.proxy_port}"
-  label = "web-nbl-node"
-  weight = 50
+  linode_id = linode_instance.web-node[count.index].id
+  type = "ipv6/range"
 }
