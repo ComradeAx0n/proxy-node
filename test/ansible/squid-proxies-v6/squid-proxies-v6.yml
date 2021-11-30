@@ -1,0 +1,6 @@
+---
+- name: Install and setup squid and python
+  import_tasks: ./install.yml
+  
+- name: Start script
+  import_tasks: ./script.yml

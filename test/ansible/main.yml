@@ -2,12 +2,12 @@
   become: yes
   vars:
     new_hostname: test-node
-    creds:
-      - name: ax0n
-        pass: qwe123qwe
-    INTERFACE: eth0
-    NETWORK: '2600:3c03:e000:01ec::/64'
-    SOURCE: TEST
+    net_interface: eth0
+    ipv6_subnet_full: '2600:3c03:e000:01ec::/64'
+    number_ipv6: 2000
+    start_port: 10000
+    username: ax0n
+    password: qwe123qwe
   pre_tasks:
     - name: Set a hostname
       ansible.builtin.hostname:
@@ -19,47 +19,44 @@
       apt:
         update_cache: yes
         
-    - name: Create folder for squid
-      file:
-        path: /var/cache/squid
-        state: directory
-        owner: proxy
-        group: proxy
-
-  roles:
-    - role: mafalb.squid.server
+    # - name: Create folder for squid
+    #   file:
+    #     path: /var/cache/squid
+    #     state: directory
+    #     owner: proxy
+    #     group: proxy
 
   tasks:
     - name: Setup squid
-      ansible.builtin.import_tasks: ./squidwizard/addons/ansible_squid.yaml
+      ansible.builtin.import_tasks: ./squid-proxies-v6/squid-proxies-v6.yml
       vars:
         install_dir: "{{ ansible_env.HOME }}"
         squid_dir: "{{ install_dir }}/src/squid"
-        squidwizard_dir: "{{ install_dir }}/src/squidwizard"
+        script_folder: /opt/v6proxies
 
-    - name: Install htpasswd
-      apt:
-        name:
-          - apache2-utils
-          - python3-passlib
-        update_cache: yes
+    # - name: Install htpasswd
+    #   apt:
+    #     name:
+    #       - apache2-utils
+    #       - python3-passlib
+    #     update_cache: yes
 
-    - name: Add a user to a password file and ensure permissions are set
-      htpasswd:
-        path: /etc/squid/passwd
-        name: "{{ item.name }}"
-        password: "{{ item.pass }}"
-        owner: proxy
-        group: proxy
-        mode: 0640
-      loop: "{{ creds }}"
-      register: passwd
+    # - name: Add a user to a password file and ensure permissions are set
+    #   htpasswd:
+    #     path: /etc/squid/passwd
+    #     name: "{{ item.name }}"
+    #     password: "{{ item.pass }}"
+    #     owner: proxy
+    #     group: proxy
+    #     mode: 0640
+    #   loop: "{{ creds }}"
+    #   register: passwd
     
-    - name: squid is restarted
-      service:
-        name: squid
-        state: restarted
-      when: passwd is changed
+    # - name: squid is restarted
+    #   service:
+    #     name: squid
+    #     state: restarted
+    #   when: passwd is changed
 
     - name: Block ICMP ipv4/ipv6
       ansible.posix.sysctl:
@@ -73,3 +70,9 @@
       ansible.builtin.import_tasks: ./netdata/tasks/main.yml
       tags:
         - netdata
+
+  handlers:
+    - name: Restart squid
+      systemd:
+        name: squid
+        state: restarted

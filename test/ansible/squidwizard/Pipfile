@@ -14,4 +14,4 @@ pyyaml = "==5.2"
 dnspython = "==1.16.0"
 
 [requires]
-python_version = "3"
+python_version = "3.6"

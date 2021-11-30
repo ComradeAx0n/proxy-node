@@ -1,0 +1,89 @@
+---
+- name: Install essential build tools
+  apt:
+    update_cache: yes
+    pkg:
+      - build-essential
+      - devscripts
+      - python3-pip
+      - wget
+      - curl
+      - python3-venv
+      - python3-dev
+    
+- name: Activate building repositories in apt/sources.list
+  replace:
+    path: /etc/apt/sources.list
+    regexp: "# deb-src"
+    replace: "deb-src"
+
+- name: Install build dependencies for Squid3
+  apt:
+    update_cache: yes
+    pkg:
+      - squid
+    state: build-dep
+
+- name: Create directories
+  file:
+    path: "{{ squid_dir }}"
+    state: directory
+
+- name: Install Squid3 source code
+  command: apt source squid
+  args:
+    chdir: "{{ squid_dir }}"
+    creates: "{{ squid_dir }}/*.dsc"
+  when: ansible_facts["distribution"] == "Ubuntu"
+
+# - name: Download Squid3 patch file
+#   get_url:
+#     url: https://git.vbergen.ch/gregor/squidwizard/raw/master/addons/squid_http_violations_patch_3.5.27.patch
+#     dest: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
+
+# - name: Patch Squid3 Debian rules file
+#   patch:
+#     remote_src: yes
+#     src: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
+#     dest: "{{ squid_dir }}/squid3-3.5.27/debian/rules"
+
+- name: Build Squid3 target
+  command:
+    cmd: debuild -us -uc -b
+    creates: "{{ squid_dir }}/*.build"
+  args:
+    chdir: "{{ squid_dir }}/squid-4.10"
+  environment:
+    DEB_CXXFLAGS_APPEND: -DMAXTCPLISTENPORTS=65000
+
+- name: Identify Squid3 package
+  find:
+    path: "{{ squid_dir }}"
+    patterns: squid_4*.deb
+  register: squid3_package
+
+- name: Install Squid3 package
+  apt:
+    deb: "{{ squid3_package.files[0].path }}"
+  when: squid3_package.matched > 0
+
+- name: Copy script
+  copy:
+    src: '{{ item }}'
+    dest: "{{ script_folder }}"
+  loop:
+    - ./script/requirements.txt
+    - ./script/gen_squid.py
+
+- name: Install python setuptools
+  pip:
+    name: setuptools
+
+- name: Install specified python requirements
+  pip:
+    requirements: /opt/v6proxies/requirements.txt
+
+- name: Increase The Maximum Number Of Open Files 
+  ansible.builtin.lineinfile:
+    path: /etc/security/limits.conf
+    line: '* - nofile 500000'

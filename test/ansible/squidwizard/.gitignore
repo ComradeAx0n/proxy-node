@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 /.idea/
 /config/
+/addons/
 .DS_Store
 .vscode/settings.json
 .vscode/launch.json

@@ -1,62 +1,134 @@
 ---
-- name: Install essential build tools
-  apt:
-    update_cache: yes
-    pkg:
-      - git
-      - python3-pip
 
-- name: Copy SquidWizard
-  copy:
-    src: ../../squidwizard/
-    dest: "{{ squidwizard_dir }}"
+- name: Pridikt Proxy Server Installation
+  hosts: squidproxies
 
-- name: Install pipenv
-  pip:
-    name: pipenv
-    executable: pip3
+  vars:
+    install_dir: "{{ ansible_env.HOME }}"
+    squid_dir: "{{ install_dir }}/src/squid"
+    squidwizard_dir: "{{ install_dir }}/src/squidwizard"
 
-- name: Run Pipenv to install SquidWizard dependencies
-  command:
-    cmd: pipenv install
-    creates: "{{ ansible_env.HOME }}/.local/share/virtualenvs/squidwizard*"
-  args:
-    chdir: "{{ squidwizard_dir }}"
+  tasks:
+    - name: Activate building repositories in apt/sources.list
+      replace:
+        path: /etc/apt/sources.list
+        regexp: "# deb-src"
+        replace: "deb-src"
 
-- name: Run SquidWizard
-  command: >
-    pipenv run python3 squidwizard.py
-    --network {{ NETWORK }}
-    --interface {{ INTERFACE }}
-    --source {{ SOURCE }}
-  args:
-    chdir: "{{ squidwizard_dir }}"
+    - name: Install essential build tools
+      apt:
+        update_cache: yes
+        pkg:
+          - git
+          - build-essential
+          - devscripts
+          - python3-pip
 
-- name: Remove networkd file
-  file:
-    path: /etc/systemd/network/05-eth0.network
-    state: absent
+    - name: Install build dependencies for Squid3
+      apt:
+        pkg:
+          - squid3
+        state: build-dep
 
-- name: Copy netplan file
-  copy:
-    remote_src: yes
-    src: "{{ squidwizard_dir }}/config/60-squid.yaml"
-    dest: /etc/netplan
-  register: copied_netplan
+    - name: Create directories
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "{{ squid_dir }}"
+        - "{{ squidwizard_dir }}"
 
-- name: apply netplan
-  command: netplan apply
-  when: copied_netplan is changed
+    - name: Install Squid3 source code
+      command: apt source squid3
+      args:
+        chdir: "{{ squid_dir }}"
+      creates: "{{ squid_dir }}/*.dsc"
+      when: ansible_facts["distribution"] == "Ubuntu"
 
-- name: Copy squid file
-  copy:
-    remote_src: yes
-    src: "{{ squidwizard_dir }}/config/squid.conf"
-    dest: /etc/squid
-  register: copied_squid_file
+    - name: Download Squid3 patch file
+      get_url:
+        url: https://git.vbergen.ch/gregor/squidwizard/raw/master/addons/squid_http_violations_patch_3.5.27.patch
+        dest: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
 
-- name: restart squid
-  systemd:
-    state: restarted
-    name: squid
-  when: copied_squid_file is changed
+    - name: Patch Squid3 Debian rules file
+      patch:
+        remote_src: yes
+        src: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
+        dest: "{{ squid_dir }}/squid3-3.5.27/debian/rules"
+
+    - name: Build Squid3 target
+      command:
+        cmd: debuild -us -uc -b
+        creates: "{{ squid_dir }}/*.build"
+      args:
+        chdir: "{{ squid_dir }}/squid3-3.5.27"
+      environment:
+        DEB_CXXFLAGS_APPEND: -DMAXTCPLISTENPORTS=2048
+
+    - name: Identify Squid3 package
+      find:
+        path: "{{ squid_dir }}"
+        patterns: squid_3*
+      register: squid3_package
+
+    - name: Install Squid3 package
+      apt:
+        deb: "{{ squid3_package.files[0].path }}"
+      creates: "{{ squid_dir }}/squid_3*"
+      when: squid3_package.matched > 0
+
+    - name: Download SquidWizard
+      git:
+        repo: https://git.vbergen.ch/gregor/squidwizard.git
+        dest: "{{ squidwizard_dir }}"
+
+    - name: Install pipenv
+      pip:
+        name: pipenv
+        executable: pip3
+
+    - name: Run Pipenv to install SquidWizard dependencies
+      command:
+        cmd: pipenv install
+        creates: "{{ ansible_env.HOME }}/.local/share/virtualenvs/squidwizard*"
+      args:
+        chdir: "{{ squidwizard_dir }}"
+
+    - name: Run SquidWizard
+      command: >
+        pipenv run python3 squidwizard.py
+        --network {{ NETWORK }}
+        --interface {{ INTERFACE }}
+        --source {{ SOURCE }}
+      args:
+        chdir: "{{ squidwizard_dir }}"
+
+    - name: Remove networkd file
+      file:
+        path: /etc/systemd/network/05-eth0.network
+        state: absent
+
+    - name: Copy netplan file
+      copy:
+        remote_src: yes
+        src: "{{ squidwizard_dir }}/config/60-squid.yaml"
+        dest: /etc/netplan
+      notify:
+        - apply netplan
+
+    - name: Copy squid file
+      copy:
+        remote_src: yes
+        src: "{{ squidwizard_dir }}/config/squid.conf"
+        dest: /etc/squid
+      notify:
+        - restart squid
+
+  handlers:
+    - name: apply netplan
+      command: netplan apply
+
+    - name: restart squid
+      systemd:
+        state: restarted
+        name: squid

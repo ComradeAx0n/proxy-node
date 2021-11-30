@@ -66,26 +66,17 @@ class SquidWizard:
         """
         os.makedirs(self.config_folder, exist_ok=True)
         with open(f"{self.config_folder}/squid.conf", "w") as f:
-            # f.write(f"acl myip src {self.source}\n")
+            f.write(f"acl myip src {self.source}\n")
             for idx, value in enumerate(ip_list, START_PORT):
                 f.write(f"acl mynet{idx} myportname {idx}\n")
             f.write("acl SSL_ports port 443\n")
             f.write("acl Safe_ports port 80\n")
             f.write("acl Safe_ports port 443\n")
             f.write("acl CONNECT method CONNECT\n")
-            # самопис
-            f.write("auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwd\n")
-            f.write("auth_param basic children 5\n")
-            f.write("auth_param basic credentialsttl 2 hours\n")
-            f.write("auth_param basic casesensitive on\n")
-            f.write("auth_param basic realm Enter your creds\n")
-            f.write("acl auth_users proxy_auth REQUIRED\n")
-            f.write("http_access allow auth_users\n")
-            # самопис окончился
-            # f.write("http_access allow myip\n")
+            f.write("http_access allow myip\n")
             f.write("http_access deny !Safe_ports\n")
             f.write("http_access deny CONNECT !SSL_ports\n")
-            f.write("http_access allow all\n")
+            f.write("http_access deny all\n")
             for idx, value in enumerate(ip_list, START_PORT):
                 f.write("http_port {} name={}\n".format(idx, idx))
             for idx, value in enumerate(ip_list, START_PORT):
