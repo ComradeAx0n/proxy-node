@@ -82,7 +82,6 @@ def add_ipv6(num_ips, unique_ip=1):
 cfg_squid = '''
     
     max_filedesc 500000
-    pid_filename /usr/local/squid/var/run/{pid}.pid
     access_log          none
     cache_store_log     none
 
@@ -154,7 +153,7 @@ squid_conf_suffix = '''
     http_access allow localhost manager
     http_access deny manager
 
-    auth_param basic program /usr/local/squid/libexec/basic_ncsa_auth /etc/squid/{pid}.auth
+    auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/{pid}.auth
     
     auth_param basic children 5
     auth_param basic realm Web-Proxy
