@@ -18,7 +18,7 @@ resource "linode_instance" "web-node" {
   }
 }
 
-resource "linode_instance_ip" "web-node-ipv6" {
-  count = var.nodes_count
-  linode_id = linode_instance.web-node[count.index].id
-}
+# resource "linode_instance_ip" "web-node-ipv6" {
+#   count = var.nodes_count
+#   linode_id = linode_instance.web-node[count.index].id
+# }
