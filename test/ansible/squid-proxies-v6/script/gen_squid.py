@@ -194,7 +194,7 @@ cfg_squid_gen = cfg_squid.format(pid=pool_name, squid_conf_refresh=squid_conf_re
                                  squid_conf_suffix=squid_conf_suffix.format(pid=pool_name),
                                  block_proxies=proxies)
 
-squid_conf_file = f'/etc/squid/squid-{pool_name}.conf'
+squid_conf_file = f'/etc/squid/squid.conf'
 if os.path.exists(path=squid_conf_file):
     os.remove(path=squid_conf_file)
     print("%s exists. Removed" % squid_conf_file)
