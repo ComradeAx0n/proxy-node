@@ -26,8 +26,11 @@
 
 - name: Create directories
   file:
-    path: "{{ squid_dir }}"
+    path: "{{ item }}"
     state: directory
+  loop:
+    - "{{ squid_dir }}"
+    - "{{ script_folder }}"
 
 - name: Install Squid3 source code
   command: apt source squid
@@ -70,7 +73,7 @@
 - name: Copy script
   copy:
     src: '{{ item }}'
-    dest: "{{ script_folder }}"
+    dest: "{{ script_folder }}/"
   loop:
     - ./script/requirements.txt
     - ./script/gen_squid.py
@@ -81,7 +84,7 @@
 
 - name: Install specified python requirements
   pip:
-    requirements: /opt/v6proxies/requirements.txt
+    requirements: "{{ script_folder }}/requirements.txt"
 
 - name: Increase The Maximum Number Of Open Files 
   ansible.builtin.lineinfile:
