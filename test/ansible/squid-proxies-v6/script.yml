@@ -1,0 +1,18 @@
+---
+- name: Generate squid config
+  command: 
+    cmd: "python3 ./gen_squid.py --ipv6_subnet_full {{ ipv6_subnet_full }} --net_interface {{ net_interface }} --pool_name squidv6  --number_ipv6 {{ number_ipv6 }} --unique_ip 1 --start_port {{ start_port }}"
+  args:
+    chdir: "{{ script_folder }}"
+  notify: Restart squid
+
+- name: Add ipv6 to network interface 
+  command: 
+    cmd: 'bash ./add_ip_squidv6.sh'
+  args:
+    chdir: "{{ script_folder }}"
+
+- name: Copy auth file
+  fetch:
+    src: /opt/v6proxies/squid_auth.csv
+    dest: "./"

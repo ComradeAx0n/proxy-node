@@ -1,0 +1,89 @@
+---
+- name: Install essential build tools
+  apt:
+    update_cache: yes
+    pkg:
+      - build-essential
+      - devscripts
+      - python3-pip
+      - wget
+      - curl
+      - python3-venv
+      - python3-dev
+    
+- name: Activate building repositories in apt/sources.list
+  replace:
+    path: /etc/apt/sources.list
+    regexp: "# deb-src"
+    replace: "deb-src"
+
+- name: Install build dependencies for Squid
+  apt:
+    update_cache: yes
+    pkg:
+      - squid
+    state: build-dep
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ squid_dir }}"
+    - "{{ script_folder }}"
+
+- name: Install Squid source code
+  command: apt source squid
+  args:
+    chdir: "{{ squid_dir }}"
+    creates: "{{ squid_dir }}/*.dsc"
+  when: ansible_facts["distribution"] == "Ubuntu"
+
+- name: Build Squid target
+  command:
+    cmd: debuild -us -uc -b
+    creates: "{{ squid_dir }}/*.build"
+  args:
+    chdir: "{{ squid_dir }}/squid-4.10"
+  environment:
+    DEB_CXXFLAGS_APPEND: -DMAXTCPLISTENPORTS=65000
+
+- name: Identify Squid package
+  find:
+    path: "{{ squid_dir }}"
+    patterns: squid_4*.deb
+  register: squid_package
+
+- name: Install Squid package
+  apt:
+    deb: "{{ squid_package.files[0].path }}"
+  when: squid_package.matched > 0
+
+- name: Copy script
+  copy:
+    src: '{{ item }}'
+    dest: "{{ script_folder }}/"
+  loop:
+    - ./script/requirements.txt
+    - ./script/gen_squid.py
+
+- name: Install python setuptools
+  pip:
+    name: setuptools
+
+- name: Install specified python requirements
+  pip:
+    requirements: "{{ script_folder }}/requirements.txt"
+
+- name: Increase The Maximum Number Of Open Files 
+  ansible.builtin.lineinfile:
+    path: /etc/security/limits.conf
+    line: '* - nofile 500000'
+
+- name: Increase timeout of squid service
+  template:
+    src: ./squid.service.j2
+    dest: /etc/systemd/system/squid.service
+  vars:
+    timeout: 600
+  notify: Restart squid
