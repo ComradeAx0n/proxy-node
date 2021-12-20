@@ -1,13 +1,11 @@
 - hosts: all
   become: yes
   vars:
-    new_hostname: test-node
+    new_hostname: web-node
     net_interface: eth0
-    ipv6_subnet_full: '2600:3c03:e001:2100::/64'
-    number_ipv6: 2000
+    # ipv6_subnet_full: '2600:3c03:e001:2100::/64'
+    number_ipv6: 10000
     start_port: 10000
-    username: ax0n
-    password: qwe123qwe
   pre_tasks:
     - name: Set a hostname
       ansible.builtin.hostname:
@@ -45,3 +43,4 @@
       systemd:
         name: squid
         state: restarted
+        daemon_reload: yes

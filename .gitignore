@@ -1,3 +1,4 @@
 .terraform*
 terraform.*
 add_ip_squidv6.sh
+squid_auth.csv

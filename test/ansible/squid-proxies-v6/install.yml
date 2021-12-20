@@ -17,7 +17,7 @@
     regexp: "# deb-src"
     replace: "deb-src"
 
-- name: Install build dependencies for Squid3
+- name: Install build dependencies for Squid
   apt:
     update_cache: yes
     pkg:
@@ -32,14 +32,14 @@
     - "{{ squid_dir }}"
     - "{{ script_folder }}"
 
-- name: Install Squid3 source code
+- name: Install Squid source code
   command: apt source squid
   args:
     chdir: "{{ squid_dir }}"
     creates: "{{ squid_dir }}/*.dsc"
   when: ansible_facts["distribution"] == "Ubuntu"
 
-- name: Build Squid3 target
+- name: Build Squid target
   command:
     cmd: debuild -us -uc -b
     creates: "{{ squid_dir }}/*.build"
@@ -48,16 +48,16 @@
   environment:
     DEB_CXXFLAGS_APPEND: -DMAXTCPLISTENPORTS=65000
 
-- name: Identify Squid3 package
+- name: Identify Squid package
   find:
     path: "{{ squid_dir }}"
     patterns: squid_4*.deb
-  register: squid3_package
+  register: squid_package
 
-- name: Install Squid3 package
+- name: Install Squid package
   apt:
-    deb: "{{ squid3_package.files[0].path }}"
-  when: squid3_package.matched > 0
+    deb: "{{ squid_package.files[0].path }}"
+  when: squid_package.matched > 0
 
 - name: Copy script
   copy:
@@ -79,3 +79,11 @@
   ansible.builtin.lineinfile:
     path: /etc/security/limits.conf
     line: '* - nofile 500000'
+
+- name: Increase timeout of squid service
+  template:
+    src: ./squid.service.j2
+    dest: /etc/systemd/system/squid.service
+  vars:
+    timeout: 600
+  notify: Restart squid

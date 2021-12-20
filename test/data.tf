@@ -8,6 +8,6 @@ terraform {
 }
 
 provider "linode" {
-  token = "9b6fbbf0bb66af678bf9577c7a861e00965a3fd9db7e855e6baba0c7da93fe0d"
+  token = var.token
 }
 
