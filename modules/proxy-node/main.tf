@@ -7,5 +7,5 @@ resource "linode_instance" "web-node" {
   group = "web"
   region = var.region
   type = var.type
-  authorized_keys = [ file(var.pubkey) ]
+  authorized_keys = [ file("${path.module}/keys/pubkey") ]
 }
