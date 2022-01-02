@@ -3,6 +3,10 @@ variable "token" {
   default = "9b6fbbf0bb66af678bf9577c7a861e00965a3fd9db7e855e6baba0c7da93fe0d"
   sensitive = true
 }
+variable "label" {
+  type = string
+  default = "web-node"
+}
 variable "pubkey" {
   type = string
   default = "./keys/pubkey"
