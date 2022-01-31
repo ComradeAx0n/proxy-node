@@ -4,3 +4,6 @@ collections:
     version: "0.2.0"
   - name: community.general
     version: "3.8.1"
+
+roles:
+  - name: merifri.3proxy
