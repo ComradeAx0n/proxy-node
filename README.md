@@ -14,12 +14,27 @@
 5. Запускаем провижен ansible
 ```ansible-galaxy install -r ./ansible/requirements.yml && ansible-playbook -u root -i '$IP_ADDRESS,' --private-key ./keys/prvkey -e 'ipv6_subnet_full=$IPV6_SUBNET' ./ansible/main.yml```
 
+### Выбор типа ноды
+
+Для растягивания триал баланса 100$ на 3 месяца использовать ноду shared cpu на 8gb g6-standard-6 ($40/mo).
+
 ## Проблемы
 
 ### IPv6
 
 1. IPv6 range не удалось запустить в регионе Atlanta us-central (вроде). Заработал в регионе Newark, NJ us-east
 2. Через terraform нет возможности добавлять ipv6/range, приходится руками добавлять.
+
+#### Проверенные регионы, где работают IPv6
+
+1. us-east (USA)
+1. ca-central (Canada, Toronto)
+1. ap-west (India, Mumbai) - ipv6 заводится долго, сайты могут не отвечать. Примерно через час норм заработало, но еще бы погонять.
+1. ap-southeast (Australia, Sydney)
+1. ap-south (Singapore, Singapore)
+1. ap-northeast (Japan, Tokyo)
+1. eu-west (UK, London) - в вебморде пишет, что нужно дать подтверждение. Проверить, не будет ли гасить ноду.
+1. eu-central (Germany, Frankfurt) - в вебморде пишет, что нужно дать подтверждение. Проверить, не будет ли гасить ноду.
 
 ## Requirements
 
