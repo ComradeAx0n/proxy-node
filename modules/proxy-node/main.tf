@@ -3,7 +3,7 @@ resource "linode_instance" "web-node" {
   tags = ["web", "node"]
 
   image = "linode/ubuntu20.04"
-  label = "${var.label}-${count.index + 1}"
+  label = "${var.region}-${var.label}-${count.index + 1}"
   group = "web"
   region = var.region
   type = var.type

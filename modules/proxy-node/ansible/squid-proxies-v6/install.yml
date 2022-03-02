@@ -80,6 +80,9 @@
     path: /etc/security/limits.conf
     line: '* - nofile 500000'
 
+# Добавить изменение /etc/systemd/system/3proxy.service
+# LimitNOFILE=500000
+
 - name: Increase timeout of squid service
   template:
     src: ./squid.service.j2
